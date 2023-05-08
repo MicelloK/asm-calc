@@ -4,21 +4,25 @@ dane1 segment
     out_msg db "Wynikiem jest: $"
     exception_msg db "Niepoprawne dane wejsciowe! $"
 
-    input db 64, ?, 65 dup('$') ; bufor na dane wejściowe
-    arg1 db 16, ?, 17 dup('$') ; bufor na argument 1
-    arg2 db 16, ?, 17 dup('$') ; bufor na argument 2
-    op db 1, ?, 2 dup('$') ; bufor na operator
+    input db 63, ?, 64 dup('$') ; bufor na dane wejściowe
+    arg1 db 15, ?, 16 dup('$') ; bufor na argument 1
+    arg2 db 15, ?, 16 dup('$') ; bufor na argument 2
+    op db 15, ?, 16 dup('$') ; bufor na operator
 
-    zero db "zero$",0
-    one db "jeden$",1
-    two db "dwa$",2
-    three db "trzy$",3
-    four db "cztery$",4
-    five db "piec$",5
-    six db "szesc$",6
-    seven db "siedem$",7
-    eight db "osiem$",8
-    nine db "dziewiec$",9
+    arg1_int db 0, '$' ; argument 1 jako liczba
+    arg2_int db 0, '$' ; argument 2 jako liczba
+    result_int db 0, "$" ; wynik jako liczba
+
+    zero db "zero "
+    one db "jeden "
+    two db "dwa "
+    three db "trzy "
+    four db "cztery "
+    five db "piec "
+    six db "szesc "
+    seven db "siedem "
+    eight db "osiem "
+    nine db "dziewiec "
 
     ten db "dziesiec$",10
     eleven db "jedenascie$",11
@@ -31,13 +35,13 @@ dane1 segment
     eighteen db "osiemnascie$",18
     nineteen db "dziewietnascie$",19
 
-    twenty db "dwadziescia$",20
-    thirty db "trzydziesci$",30
-    forty db "czterdziesci$",40
-    fifty db "piecdziesiat$",50
-    sixty db "szescdziesiat$",60
-    seventy db "siedemdziesiat$",70
-    eighty db "osiemdziesiat$",80
+    twenty db "dwadziescia $",20
+    thirty db "trzydziesci $",30
+    forty db "czterdziesci $",40
+    fifty db "piecdziesiat $",50
+    sixty db "szescdziesiat $",60
+    seventy db "siedemdziesiat $",70
+    eighty db "osiemdziesiat $",80
 
     plus db "plus$"
     minus db "minus$"
@@ -65,14 +69,19 @@ start1:
     ; analiza danych
     call split
 
-    mov dx, offset arg2+2
-    call puts
-
-    mov dx, offset op+2
-    call puts
-
+    ; konwersja argumentów na liczby
     mov dx, offset arg1+2
+    call arg_to_int
+
+    mov dx, offset arg2+2
+    call arg_to_int
+
+    ; działanie
+    call operation
+
+    mov dx, offset out_msg
     call puts
+
 
 exit:
     mov al,0 ; zwroc 0 do systemu
@@ -104,66 +113,86 @@ getl: ; wczytuje ciąg znaków z klawiatury i zapisuje do bufora
     int 21h
     ret
 
+; si - wskaźnik na początek pierwszego ciągu znaków
+; di - wskaźnik na początek drugiego ciągu znaków
+cmp_str:
+    xor al, al ; 1 - równe, 0 - różne
+
+    cmploop:
+        mov bl, byte ptr ds:[si] ; bl - aktualny znak z si
+        mov cl, byte ptr ds:[di] ; cl - aktualny znak z di
+
+        cmp bl, '$' ; jeśli koniec ciągu znaków to koniec
+        je cmploop_equal
+
+        cmp cl, '$' ; jeśli koniec ciągu znaków to koniec
+        je cmploop_not_equal
+
+        cmp bl, cl ; jeśli znaki są różne to koniec
+        jne cmploop_not_equal
+
+        inc si
+        inc di
+        jmp cmploop
+
+    cmploop_not_equal:
+        mov al, 0
+        ret
+
+    cmploop_equal:
+        mov al, 1
+        ret
+
 endl:
     mov dx, offset nline
     call puts
     ret
+
+;------------------------;
+;-- PARSOWANIE WEJSCIA --;
+;------------------------;
 
 split: ; dzieli ciąg znaków na argumenty i operator
     mov si, offset input+2 ; si - wskaźnik na początek ciągu znaków
 
     mov di, offset arg1+2
     arg1loop:
-        mov al, [si]
+        mov al, byte ptr ds:[si] ; al - aktualny znak
         cmp al, ' '
-        je arg1loop_done
-        mov [di], al
+        je arg1loop_done ; jeśli spacja to koniec
+        mov byte ptr ds:[di], al ; zapisanie znaku do bufora
         inc si
         inc di
         jmp arg1loop
 
     arg1loop_done:
-        mov byte ptr [di], '$' ; zakończenie bufora
+        mov byte ptr ds:[di], '$' ; zakończenie bufora
 
     ; pomijanie spacji
     spcloop1:
-        mov al, [si]
+        mov al, byte ptr ds:[si] ; al - aktualny znak
         cmp al, ' '
-        jne operator
+        jne operator ; jeśli nie ma spacji to znaczy że operator
         inc si
         jmp spcloop1
 
     operator:
-        mov di, offset op+2 ; di - wskaźnik na początek bufora operatora
-        mov al, [si]
-        cmp al, '+' ; sprawdzenie czy operator jest dodawaniem
-        je op_plus
-        cmp al, '-' ; sprawdzenie czy operator jest odejmowaniem
-        je op_minus
-        cmp al, '*' ; sprawdzenie czy operator jest mnożeniem
-        je op_mlt
-        jmp exception ; niepoprawny operator
+        mov di, offset op+2
 
-    op_plus:
-        mov dx, offset plus
-        jmp op_done
-
-    op_minus:
-        mov dx, offset minus
-        jmp op_done
-
-    op_mlt:
-        mov dx, offset mlt
-        jmp op_done
-
-    op_done:
+    oploop:
+        mov al, byte ptr ds:[si] ; al - aktualny znak
+        cmp al, ' '
+        je oploop_done ; jeśli spacja to koniec
+        mov byte ptr ds:[di], al ; zapisanie znaku do bufora
         inc si
-        mov [di], al
         inc di
-        mov byte ptr [di], '$' ; zakończenie bufora
+        jmp oploop
+
+    oploop_done:
+        mov byte ptr ds:[di], '$' ; zakończenie bufora
     
     spcloop2:
-        mov al, [si]
+        mov al, byte ptr ds:[si]
         cmp al, ' '
         jne arg2start
         inc si
@@ -173,20 +202,123 @@ split: ; dzieli ciąg znaków na argumenty i operator
         mov di, offset arg2+2
 
     arg2loop:
-        mov al, [si]
+        mov al, byte ptr ds:[si]
         cmp al, ' '
         je arg2loop_done
         cmp al , 13
         je arg2loop_done
-        mov [di], al
+        mov byte ptr ds:[di], al
         inc si
         inc di
         jmp arg2loop
 
     arg2loop_done:
-        mov byte ptr [di], '$' ; zakończenie bufora
+        mov byte ptr ds:[di], '$' ; zakończenie bufora
 
     ret
+
+; dx - offset na argument+2
+arg_to_int:
+    mov si, offset zero
+    xor ch, ch ; ch - ilosc spacji = 0
+    
+    fit:
+        mov di, dx
+
+        number_loop:
+            mov al, byte ptr ds:[si] ; al - aktualny znak z si
+            mov bl, byte ptr ds:[di] ; bl - aktualny znak z arg1
+
+            cmp ch, 10 ; jeśli mniej niż 10 spacji to ok
+            je exception ; jeśli więcej niż 10 spacji to błąd
+
+            cmp bl, '$' ; jeśli koniec ciągu znaków to koniec
+            je fit_done
+
+            cmp al, ' '
+            jne not_next
+            inc ch ; jeśli spacja to zwiększ licznik spacji
+            not_next:
+
+            inc si
+            cmp al, bl ; jeśli znaki są różne to koniec
+            jne next_loop
+
+            inc di
+            jmp number_loop
+
+    next_loop:
+        mov al, byte ptr ds:[si] ; al - aktualny znak z si
+        cmp al, ' '
+        je next_loop_done
+        inc si
+        jmp next_loop
+
+    next_loop_done:
+        inc si
+        jmp fit
+
+    fit_done:
+        cmp al, ' '
+        jne exception ; jeśli arg sie skonczyl ale drugi wyraz nie to błąd
+
+        mov di, offset arg1_int
+        mov byte ptr ds:[di], ch ; zapisz ilość spacji
+        ret
+
+; operation - wykonuje działanie na arg1 i arg2
+operation:
+    mov di, offset op+2 ; di - wskaźnik na początek ciągu znaków
+
+    mov si, offset plus ; si - wskaźnik na początek ciągu znaków
+    call cmp_str
+    cmp al, 1
+    je plus_found
+
+    mov si, offset minus
+    call cmp_str
+    cmp al, 1
+    je minus_found
+
+    mov si, offset mlt
+    call cmp_str
+    cmp al, 1
+    je mlt_found
+
+    jmp exception
+
+    plus_found:
+        mov al, byte ptr ds:[arg1_int]
+        add al, byte ptr ds:[arg2_int]
+        mov byte ptr ds:[result_int], al
+        ret
+
+    minus_found:
+        mov al, byte ptr ds:[arg1_int]
+        sub al, byte ptr ds:[arg2_int]
+        mov byte ptr ds:[result_int], al
+        ret
+
+    mlt_found:
+        xor ax, ax
+        mov al, byte ptr ds:[arg1_int]
+        mul byte ptr ds:[arg2_int]
+        mov byte ptr ds:[result_int], al
+        ret
+
+; print_int:
+
+
+
+
+
+
+
+
+;------------------------;
+
+
+
     
 
 
