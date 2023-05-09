@@ -9,9 +9,9 @@ dane1 segment
     arg2 db 15, ?, 16 dup('$') ; bufor na argument 2
     op db 15, ?, 16 dup('$') ; bufor na operator
 
-    arg1_int db 0, '$' ; argument 1 jako liczba
-    arg2_int db 0, '$' ; argument 2 jako liczba
-    result_int db 0, "$" ; wynik jako liczba
+    arg1_int db 0 ; argument 1 jako liczba
+    arg2_int db 0 ; argument 2 jako liczba
+    result_int dw 0 ; wynik jako liczba
 
     zero db "zero "
     one db "jeden "
@@ -72,15 +72,19 @@ start1:
     ; konwersja argumentów na liczby
     mov dx, offset arg1+2
     call arg_to_int
+    mov byte ptr ds:[arg1_int], al
 
     mov dx, offset arg2+2
     call arg_to_int
+    mov byte ptr ds:[arg2_int], al
 
     ; działanie
     call operation
 
     mov dx, offset out_msg
     call puts
+
+    call parse_int
 
 
 exit:
@@ -221,7 +225,7 @@ split: ; dzieli ciąg znaków na argumenty i operator
 arg_to_int:
     mov si, offset zero
     xor ch, ch ; ch - ilosc spacji = 0
-    
+
     fit:
         mov di, dx
 
@@ -235,35 +239,33 @@ arg_to_int:
             cmp bl, '$' ; jeśli koniec ciągu znaków to koniec
             je fit_done
 
-            cmp al, ' '
-            jne not_next
-            inc ch ; jeśli spacja to zwiększ licznik spacji
-            not_next:
-
             inc si
             cmp al, bl ; jeśli znaki są różne to koniec
-            jne next_loop
+            jne next_num
 
             inc di
             jmp number_loop
 
-    next_loop:
-        mov al, byte ptr ds:[si] ; al - aktualny znak z si
-        cmp al, ' '
-        je next_loop_done
-        inc si
-        jmp next_loop
+    next_num:
+        inc ch
 
-    next_loop_done:
-        inc si
-        jmp fit
+        next_loop:
+            mov al, byte ptr ds:[si] ; al - aktualny znak z si
+            cmp al, ' '
+            je next_loop_done
+            inc si
+            jmp next_loop
+
+        next_loop_done:
+            inc si
+            jmp fit
 
     fit_done:
         cmp al, ' '
         jne exception ; jeśli arg sie skonczyl ale drugi wyraz nie to błąd
 
-        mov di, offset arg1_int
-        mov byte ptr ds:[di], ch ; zapisz ilość spacji
+        mov al, ch
+        ; mov byte ptr ds:[di], ch ; zapisanie ilości spacji
         ret
 
 ; operation - wykonuje działanie na arg1 i arg2
@@ -289,7 +291,7 @@ operation:
 
     plus_found:
         mov al, byte ptr ds:[arg1_int]
-        add al, byte ptr ds:[arg2_int]
+        add al, byte ptr ds:[arg2_int] ; al - wynik
         mov byte ptr ds:[result_int], al
         ret
 
@@ -306,7 +308,157 @@ operation:
         mov byte ptr ds:[result_int], al
         ret
 
-; print_int:
+parse_int:
+    mov bx, word ptr ds:[result_int]
+    parse_tens:
+        mov dx, offset twenty
+        sub bx, 20
+        cmp bx, 0
+        je parse_tens_done
+        jl print_tens
+
+        mov dx, offset thirty
+        sub bx, 10
+        cmp bx, 0
+        je parse_tens_done
+        jl print_tens
+
+        mov dx, offset forty
+        sub bx, 10
+        cmp bx, 0
+        je parse_tens_done
+        jl print_tens
+
+        mov dx, offset fifty
+        sub bx, 10
+        cmp bx, 0
+        je parse_tens_done
+        jl print_tens
+
+        mov dx, offset sixty
+        sub bx, 10
+        cmp bx, 0
+        je parse_tens_done
+        jl print_tens
+
+        mov dx, offset seventy
+        sub bx, 10
+        cmp bx, 0
+        je parse_tens_done
+        jl print_tens
+
+        mov dx, offset eighty
+        sub bx, 10
+        cmp bx, 0
+        je parse_tens_done
+        jl print_tens
+
+    parse_tens_done:
+        call puts
+        ret
+
+    print_tens:
+        call puts
+        jmp parse_units
+
+    parse_units:
+        mov dx, offset zero + '$'
+        cmp bx, 0
+        je parse_units_done
+
+        mov dx, offset one + '$'
+        cmp bx, 1
+        je parse_units_done
+
+        mov dx, offset two + '$'
+        cmp bx, 2
+        je parse_units_done
+
+        mov dx, offset three + '$'
+        cmp bx, 3
+        je parse_units_done
+
+        mov dx, offset four + '$'
+        cmp bx, 4
+        je parse_units_done
+
+        mov dx, offset five + '$'
+        cmp bx, 5
+        je parse_units_done
+
+        mov dx, offset six + '$'
+        cmp bx, 6
+        je parse_units_done
+
+        mov dx, offset seven + '$'
+        cmp bx, 7
+        je parse_units_done
+
+        mov dx, offset eight + '$'
+        cmp bx, 8
+        je parse_units_done
+
+        mov dx, offset nine + '$'
+        cmp bx, 9
+        je parse_units_done
+
+    parse_units_done:
+        call puts
+        ret
+
+    parse_teens:
+        mov dx, offset ten
+        cmp bx, 10
+        je parse_teens_done
+
+        mov dx, offset eleven
+        cmp bx, 11
+        je parse_teens_done
+
+        mov dx, offset twelve
+        cmp bx, 12
+        je parse_teens_done
+
+        mov dx, offset thirteen
+        cmp bx, 13
+        je parse_teens_done
+
+        mov dx, offset fourteen
+        cmp bx, 14
+        je parse_teens_done
+
+        mov dx, offset fifteen
+        cmp bx, 15
+        je parse_teens_done
+
+        mov dx, offset sixteen
+        cmp bx, 16
+        je parse_teens_done
+
+        mov dx, offset seventeen
+        cmp bx, 17
+        je parse_teens_done
+
+        mov dx, offset eighteen
+        cmp bx, 18
+        je parse_teens_done
+
+        mov dx, offset nineteen
+        cmp bx, 19
+        je parse_teens_done
+
+        jmp parse_units
+
+    parse_teens_done:
+        call puts
+        ret
+
+
+
+
+
+
+
 
 
 
