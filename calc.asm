@@ -43,14 +43,14 @@ dane1 ends
 
 code1 segment
 start1:
-    ; \inicjalizacja stosu\
+    ; \inicjalizacja stosu\                             ; nie jest konieczne do działania programu
     mov ax, seg stos1                                   ; segment stosu
     mov ss, ax                                          ; ss = stos1
     mov sp, offset wstos1                               ; sp = wstos1
 
     ; \początek programu\
     mov dx, offset in_msg                               ; dx = in_msg
-    call puts ; wypisanie wiadomości
+    call puts                                           ; wypisanie wiadomości
 
     ; \obsługa wejścia\
     call getl                                           ; wczytanie ciągu znaków
@@ -338,7 +338,6 @@ operation:
         ret
 
     mlt_found:
-        xor ax, ax                                      ; zerowanie ax !!!!!!!!!
         mov al, byte ptr ds:[arg1_int]                  ; al - argument 1
         mul byte ptr ds:[arg2_int]                      ; mnożenie al przez arg2
         mov byte ptr ds:[result_int], al                ; zapisanie wyniku do result_int
