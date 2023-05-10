@@ -13,17 +13,19 @@ dane1 segment
     arg2_int db 0 ; argument 2 jako liczba
     result_int dw 0 ; wynik jako liczba
 
-    units db "zero ", "jeden ", "dwa ", "trzy ", "cztery ", "piec ", "szesc ", "siedem ", "osiem ", "dziewiec "
+    digits db "zero ", "jeden ", "dwa ", "trzy ", "cztery ", "piec ", "szesc ", "siedem ", "osiem ", "dziewiec "
+
+    units db "zero$", "jeden$", "dwa$", "trzy$", "cztery$", "piec$", "szesc$", "siedem$", "osiem$", "dziewiec$"
     teens db "dziesiec$", "jedenascie$", "dwanascie$", "trzynascie$", "czternascie$", "pietnascie$", "szesnascie$", "siedemnascie$", "osiemnascie$", "dziewietnascie$"
     tens db "dwadziescia $", "trzydziesci $", "czterdziesci $", "piecdziesiat $", "szescdziesiat $", "siedemdziesiat $", "osiemdziesiat $"
 
     units_val db 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
     teens_val db 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-    tens_val db 20, 30, 40, 50, 60, 70, 80
 
     plus db "plus$"
     minus db "minus$"
     mlt db "razy$"
+    minus_print db "minus $"
 
 dane1 ends
 
@@ -211,7 +213,7 @@ split: ; dzieli ciąg znaków na argumenty i operator
 
 ; dx - offset na argument+2
 arg_to_int:
-    mov si, offset units
+    mov si, offset digits
     xor ch, ch ; ch - ilosc spacji = 0
 
     fit:
@@ -297,16 +299,43 @@ operation:
         ret
 
 parse_int:
+    xor ah, ah
     mov al, byte ptr ds:[result_int]
 
+    cmp al, 0
+    jl minus_sign
+
     cmp al, 10
-    jl parse_teens
+    jl parse_units
     
     cmp al, 20
     jl parse_teens
 
     parse_tens:
+        mov si, offset units_val+2
+        mov di, offset tens
 
+        mov bl, 10
+        div bl ; al - dziesiatki, ah - jednosci
+        mov bh , ah ; bh - jednosci, puts psuje ax
+        
+        tens_loop:
+            cmp al, byte ptr ds:[si]
+            je tens_loop_done
+            call next_offset
+            inc si
+            jmp tens_loop
+
+        tens_loop_done:
+            mov dx, di
+            call puts
+            mov al, bh
+            cmp al, 0
+
+            je dont_add_unit
+            jmp parse_units
+            dont_add_unit:
+                ret
 
     parse_teens:
         mov si, offset teens_val
@@ -319,30 +348,46 @@ parse_int:
             inc si
             jmp teens_loop
 
-        next_offset:
-            mov bl, byte ptr ds:[di]
-            cmp bl, '$'
-            je next_offset_end
-            inc di
-            jmp next_offset
-            next_offset_end:
-                inc di
-                ret
-
         teens_loop_done:
             mov dx, di
             call puts
             ret
 
-        
-            
-
-        
-
-
-
+    minus_sign:
+        mov dx, offset minus_print
+        call puts
+        mov al, byte ptr ds:[result_int]
+        neg al
+        jmp parse_units
 
     parse_units:
+        mov si, offset units_val
+        mov di, offset units
+
+        units_loop:
+            cmp al, byte ptr ds:[si]
+            je units_loop_done
+            call next_offset
+            inc si
+            jmp units_loop
+
+        units_loop_done:
+            mov dx, di
+            call puts
+            ret
+
+    next_offset: ; inkrementuje di do następnego znaku '$'
+        mov bl, byte ptr ds:[di]
+        cmp bl, '$'
+        je next_offset_end
+
+        inc di
+        jmp next_offset
+        next_offset_end:
+            inc di
+            ret
+
+        
 
 
 
