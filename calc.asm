@@ -13,35 +13,13 @@ dane1 segment
     arg2_int db 0 ; argument 2 jako liczba
     result_int dw 0 ; wynik jako liczba
 
-    zero db "zero "
-    one db "jeden "
-    two db "dwa "
-    three db "trzy "
-    four db "cztery "
-    five db "piec "
-    six db "szesc "
-    seven db "siedem "
-    eight db "osiem "
-    nine db "dziewiec "
+    units db "zero ", "jeden ", "dwa ", "trzy ", "cztery ", "piec ", "szesc ", "siedem ", "osiem ", "dziewiec "
+    teens db "dziesiec$", "jedenascie$", "dwanascie$", "trzynascie$", "czternascie$", "pietnascie$", "szesnascie$", "siedemnascie$", "osiemnascie$", "dziewietnascie$"
+    tens db "dwadziescia $", "trzydziesci $", "czterdziesci $", "piecdziesiat $", "szescdziesiat $", "siedemdziesiat $", "osiemdziesiat $"
 
-    ten db "dziesiec$",10
-    eleven db "jedenascie$",11
-    twelve db "dwanascie$",12
-    thirteen db "trzynascie$",13
-    fourteen db "czternascie$",14
-    fifteen db "pietnascie$",15
-    sixteen db "szesnascie$",16
-    seventeen db "siedemnascie$",17
-    eighteen db "osiemnascie$",18
-    nineteen db "dziewietnascie$",19
-
-    twenty db "dwadziescia $",20
-    thirty db "trzydziesci $",30
-    forty db "czterdziesci $",40
-    fifty db "piecdziesiat $",50
-    sixty db "szescdziesiat $",60
-    seventy db "siedemdziesiat $",70
-    eighty db "osiemdziesiat $",80
+    units_val db 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    teens_val db 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+    tens_val db 20, 30, 40, 50, 60, 70, 80
 
     plus db "plus$"
     minus db "minus$"
@@ -159,7 +137,17 @@ endl:
 split: ; dzieli ciąg znaków na argumenty i operator
     mov si, offset input+2 ; si - wskaźnik na początek ciągu znaków
 
-    mov di, offset arg1+2
+    ; usuwanie początkowych spacji
+    spcloop0:
+        mov al, byte ptr ds:[si] ; al - aktualny znak
+        cmp al, ' '
+        jne arg1start ; jeśli nie ma spacji to znaczy że argument 1
+        inc si
+        jmp spcloop0
+
+    arg1start:
+        mov di, offset arg1+2
+
     arg1loop:
         mov al, byte ptr ds:[si] ; al - aktualny znak
         cmp al, ' '
@@ -223,7 +211,7 @@ split: ; dzieli ciąg znaków na argumenty i operator
 
 ; dx - offset na argument+2
 arg_to_int:
-    mov si, offset zero
+    mov si, offset units
     xor ch, ch ; ch - ilosc spacji = 0
 
     fit:
@@ -309,149 +297,60 @@ operation:
         ret
 
 parse_int:
-    mov bx, word ptr ds:[result_int]
+    mov al, byte ptr ds:[result_int]
+
+    cmp al, 10
+    jl parse_teens
+    
+    cmp al, 20
+    jl parse_teens
+
     parse_tens:
-        mov dx, offset twenty
-        sub bx, 20
-        cmp bx, 0
-        je parse_tens_done
-        jl print_tens
 
-        mov dx, offset thirty
-        sub bx, 10
-        cmp bx, 0
-        je parse_tens_done
-        jl print_tens
-
-        mov dx, offset forty
-        sub bx, 10
-        cmp bx, 0
-        je parse_tens_done
-        jl print_tens
-
-        mov dx, offset fifty
-        sub bx, 10
-        cmp bx, 0
-        je parse_tens_done
-        jl print_tens
-
-        mov dx, offset sixty
-        sub bx, 10
-        cmp bx, 0
-        je parse_tens_done
-        jl print_tens
-
-        mov dx, offset seventy
-        sub bx, 10
-        cmp bx, 0
-        je parse_tens_done
-        jl print_tens
-
-        mov dx, offset eighty
-        sub bx, 10
-        cmp bx, 0
-        je parse_tens_done
-        jl print_tens
-
-    parse_tens_done:
-        call puts
-        ret
-
-    print_tens:
-        call puts
-        jmp parse_units
-
-    parse_units:
-        mov dx, offset zero + '$'
-        cmp bx, 0
-        je parse_units_done
-
-        mov dx, offset one + '$'
-        cmp bx, 1
-        je parse_units_done
-
-        mov dx, offset two + '$'
-        cmp bx, 2
-        je parse_units_done
-
-        mov dx, offset three + '$'
-        cmp bx, 3
-        je parse_units_done
-
-        mov dx, offset four + '$'
-        cmp bx, 4
-        je parse_units_done
-
-        mov dx, offset five + '$'
-        cmp bx, 5
-        je parse_units_done
-
-        mov dx, offset six + '$'
-        cmp bx, 6
-        je parse_units_done
-
-        mov dx, offset seven + '$'
-        cmp bx, 7
-        je parse_units_done
-
-        mov dx, offset eight + '$'
-        cmp bx, 8
-        je parse_units_done
-
-        mov dx, offset nine + '$'
-        cmp bx, 9
-        je parse_units_done
-
-    parse_units_done:
-        call puts
-        ret
 
     parse_teens:
-        mov dx, offset ten
-        cmp bx, 10
-        je parse_teens_done
+        mov si, offset teens_val
+        mov di, offset teens
 
-        mov dx, offset eleven
-        cmp bx, 11
-        je parse_teens_done
+        teens_loop:
+            cmp al, byte ptr ds:[si]
+            je teens_loop_done
+            call next_offset
+            inc si
+            jmp teens_loop
 
-        mov dx, offset twelve
-        cmp bx, 12
-        je parse_teens_done
+        next_offset:
+            mov bl, byte ptr ds:[di]
+            cmp bl, '$'
+            je next_offset_end
+            inc di
+            jmp next_offset
+            next_offset_end:
+                inc di
+                ret
 
-        mov dx, offset thirteen
-        cmp bx, 13
-        je parse_teens_done
+        teens_loop_done:
+            mov dx, di
+            call puts
+            ret
 
-        mov dx, offset fourteen
-        cmp bx, 14
-        je parse_teens_done
+        
+            
 
-        mov dx, offset fifteen
-        cmp bx, 15
-        je parse_teens_done
+        
 
-        mov dx, offset sixteen
-        cmp bx, 16
-        je parse_teens_done
 
-        mov dx, offset seventeen
-        cmp bx, 17
-        je parse_teens_done
 
-        mov dx, offset eighteen
-        cmp bx, 18
-        je parse_teens_done
 
-        mov dx, offset nineteen
-        cmp bx, 19
-        je parse_teens_done
+    parse_units:
 
-        jmp parse_units
 
-    parse_teens_done:
-        call puts
-        ret
+
+
+
+
+
+    
 
 
 
