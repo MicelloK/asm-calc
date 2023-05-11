@@ -8,8 +8,7 @@ Po uruchomieniu programu na ekranie w trybie tekstowym powinien pojawić się ko
 
 Przykłady wywołania Programu:
 
-Wprowadź słowny opis działania: trzy razy pięć
-Wynikiem jest: piętnaście
+Wprowadź słowny opis działania: trzy razy pięćWynikiem jest: piętnaście
 
 Wprowadź słowny opis działania: osiem minus zero
 Wynikiem jest: osiem
@@ -35,4 +34,11 @@ Aby uruchomić program należy w tym samym katalogu wykonać polecenie:
 ```
 calc.exe
 ```
+
+## X D
+
+3.9 na zachętę
+
+Nauczcie się co robi funkcja call i cmp dzieciaczki.
+I nie ważcie się używać słowa "chyba"
 
